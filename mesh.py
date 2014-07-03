@@ -88,6 +88,9 @@ def get_quad(center, n, side=1.):
     if any(np.isnan(v) for v in n):
         return
 
+    if np.allclose(n, np.zeros(n.shape)):
+        return
+
     # Build two vectors orthogonal between themselves and the normal
     if (np.abs(n2) > 0.2 or np.abs(n3) > 0.2):
         C = np.array([1, 0, 0])
@@ -98,8 +101,8 @@ def get_quad(center, n, side=1.):
     ortho2 = np.cross(n, ortho1)
     ortho2 *= l / np.linalg.norm(ortho2)
 
-    ortho1[[2,1]] = ortho1[[1,2]]
-    ortho2[[2,1]] = ortho2[[1,2]]
+    #ortho1[[2,1]] = ortho1[[1,2]]
+    #ortho2[[2,1]] = ortho2[[1,2]]
     ortho1[1] = -ortho1[1]
     ortho2[1] = -ortho2[1]
 
