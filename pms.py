@@ -21,18 +21,18 @@ def getLightning(filename):
 
 def photometricStereo(lightning_filename, images_filenames):
     lightning = getLightning(lightning_filename)
-    images = map(getImage, images_filenames)
+    images = list(map(getImage, images_filenames))
 
-    I = np.dstack(images)
+    I = np.vstack(x.ravel() for x in images)
     N = np.vstack(lightning[x] for x in images_filenames)
-    N_i =np.linalg.inv(N)
-    normals = np.empty(I.shape)
-    for x in range(I.shape[0]):
-        for y in range(I.shape[1]):
-            rho = np.linalg.norm(N_i.dot( I[x,y] ))
-            normals[x,y] = N_i.dot( I[x,y] ) / rho
-    import pdb; pdb.set_trace()
-    
+    N_i = np.linalg.pinv(N)
+    # TODO: Check impact of rho
+    rho = np.linalg.norm(N_i.dot( I ), axis=0)
+    normals, residual, rank, s = np.linalg.lstsq(N, I)
+    w, h = images[0].shape
+    normals = normals.reshape(3, w, h).swapaxes(0, 2)
+    # TODO: Raise an error on misbehavior of lstsq.
+
     return normals
 
 
@@ -61,11 +61,11 @@ def main():
             pickle.dump(normals, fhdl)
     import matplotlib.pyplot as plt
     #plt.quiver(normals[:,:,0], normals[:,:,1])
-    #plt.savefig('blu.png')
+    #plt.savefig('normals.png')
     #plt.show()
-    plt.imsave('blu1.png', normals[:,:,0])
-    plt.imsave('blu2.png', normals[:,:,1])
-    plt.imsave('blu3.png', normals[:,:,2])
+    plt.imsave('normals1.png', normals[:,:,0])
+    plt.imsave('normals2.png', normals[:,:,1])
+    plt.imsave('normals3.png', normals[:,:,2])
 
 
 if __name__ == "__main__":
