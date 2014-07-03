@@ -88,9 +88,6 @@ def get_quad(center, n, side=1.):
     if any(np.isnan(v) for v in n):
         return
 
-    #if n2 < 0.2:
-    #    return
-
     # Build two vectors orthogonal between themselves and the normal
     if (np.abs(n2) > 0.2 or np.abs(n3) > 0.2):
         C = np.array([1, 0, 0])

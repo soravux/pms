@@ -1,0 +1,42 @@
+#include "colors.inc"
+
+camera
+{
+  sky <0,0,1>           //Don't change this
+  direction <-1,0,0>    //Don't change this  
+  right <-4/3,0,0>      //Don't change this
+  location <20,0,0>  //Camera location
+  look_at <0,0,0>       //Where camera is pointing
+  angle 15              //Angle of the view--increase to see more, decrease to see less
+}
+
+global_settings
+{
+    photons
+    {
+        count 20000
+    }
+}
+
+box {
+    <-1,-1,-1>
+    <1,1,1>
+    texture
+    {
+        finish
+        {
+            ambient 0.0
+            specular 0
+            diffuse 1
+        }
+        pigment
+        {
+            color White
+        }
+    }
+    photons
+    {
+        target
+        //reflection on
+    }
+}
