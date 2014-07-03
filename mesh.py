@@ -114,20 +114,23 @@ def get_quad(center, n, side=1.):
     ]]
 
 
-with open('data.pkl', 'rb') as fhdl:
-    normals = pickle.load(fhdl)
+def writeMesh(normals, filename):
+    with open(filename, 'wb') as fp:
+        writer = Binary_STL_Writer(fp)
+        for x in range(0, normals.shape[0], 20):
+            for y in range(0, normals.shape[1], 20):
+                quad = get_quad(
+                    (0, x, y),
+                    normals[x,y,:],
+                    16,
+                )
+                if quad:
+                    print(normals[x,y,:], [int(j) for i in quad[0] for j in i])
+                    writer.add_faces(quad)
+        writer.close()
 
-with open('out.stl', 'wb') as fp:
-    writer = Binary_STL_Writer(fp)
-    for x in range(0, normals.shape[0], 20):
-        for y in range(0, normals.shape[1], 20):
-            quad = get_quad(
-                (0, x, y),
-                normals[x,y,:],
-                16,
-            )
-            if quad:
-                print(normals[x,y,:], [int(j) for i in quad[0] for j in i])
-                writer.add_faces(quad)
-    writer.close()
 
+if __name__ == '__main__':
+    with open('data.pkl', 'rb') as fhdl:
+        normals = pickle.load(fhdl)
+    writeMesh(normals)

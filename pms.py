@@ -36,6 +36,35 @@ def photometricStereo(lightning_filename, images_filenames):
     return normals
 
 
+def colorizeNormals(normals):
+    """Saves the normals as an image"""
+    # Normalize the normals
+    nf = np.linalg.norm(normals, axis=normals.ndim - 1)
+    normals_n = normals / np.dstack((nf, nf, nf))
+
+    color = (normals_n + 1) / 2
+
+    return color
+
+def generateNormalMap(dims=600):
+    """Generate a mapping of the normals to understand the colorizeNormals
+    output."""
+    x, y = np.meshgrid(np.linspace(-1, 1, dims), np.linspace(-1, 1, dims))
+    zsq = 1 - np.power(x, 2) - np.power(y, 2)
+
+    valid = zsq >= 0
+
+    z = np.zeros(x.shape)
+    z[valid] = np.sqrt(zsq[valid])
+
+    img = np.transpose(colorizeNormals(np.array([x.ravel(), -y.ravel(), z.ravel()])), [2, 3, 1])
+    img = img.reshape((dims[0], dims[1], 3))
+
+    img[~valid[:,:,[1, 1, 1]]] = 0
+
+    return img
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Photometric Stereo",
@@ -59,13 +88,13 @@ def main():
         normals = photometricStereo(args.lightning, args.image)
         with open('data.pkl', 'wb') as fhdl:
             pickle.dump(normals, fhdl)
+
+    color = colorizeNormals(normals)
     import matplotlib.pyplot as plt
-    #plt.quiver(normals[:,:,0], normals[:,:,1])
-    #plt.savefig('normals.png')
-    #plt.show()
-    plt.imsave('normals1.png', normals[:,:,0])
-    plt.imsave('normals2.png', normals[:,:,1])
-    plt.imsave('normals3.png', normals[:,:,2])
+    plt.imsave('out.png', color)
+
+    normals = generateNormalMap()
+    plt.imsave('map.png', normals)
 
 
 if __name__ == "__main__":
