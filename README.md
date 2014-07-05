@@ -9,7 +9,16 @@ This software aims to build a 3D reconstruction from light informations in image
 Installation
 ------------
 
-Todo
+Requirements:
+
+* Python >= 3.2 or >= 2.7
+** Numpy
+* POV-Ray (for the tests)
+
+POV-Ray
+~~~~~~~
+
+Ensure you have a valid POV-Ray installation with the executable `povray` available on your PATH. On Windows, the simplest way to achieve this is to download [megapov](http://megapov.inetart.net/), create a shortcut named `povray` to `megapov` and put it in your PATH environment variable.
 
 How to use
 ----------
