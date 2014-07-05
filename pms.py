@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 import argparse
 import json
+import pickle
 
 import numpy as np
 from scipy.misc import imread
 
 import matplotlib
 matplotlib.use('Agg')
+from matplotlib import pyplot as plt
 
 
 def getImage(filename):
@@ -57,10 +59,11 @@ def generateNormalMap(dims=600):
     z = np.zeros(x.shape)
     z[valid] = np.sqrt(zsq[valid])
 
-    img = np.transpose(colorizeNormals(np.array([x.ravel(), -y.ravel(), z.ravel()])), [2, 3, 1])
-    img = img.reshape((dims[0], dims[1], 3))
+    this_array = np.dstack([x, -y, z]).swapaxes(0, 1)
+    color = colorizeNormals(this_array)
+    img = color
 
-    img[~valid[:,:,[1, 1, 1]]] = 0
+    img[~valid] = 0
 
     return img
 
@@ -71,16 +74,31 @@ def main():
     )
     parser.add_argument(
         "lightning",
+        nargs="?",
         help="Filename of JSON file containing lightning information",
     )
     parser.add_argument(
         "image",
-        nargs="+",
+        nargs="*",
         help="Images filenames",
     )
+    parser.add_argument(
+        "--generate-map",
+        action='store_true',
+        help="Generate a map.png file which represends the colors of the "
+             "normal mapping.",
+    )
     args = parser.parse_args()
+        
+    if args.generate_map:
+        normals = generateNormalMap()
+        plt.imsave('map.png', normals)
+        return
 
-    import pickle
+    if not (args.lightning and len(args.image) >= 3):
+        print("Please specify a lightning file and 3+ image files.")
+        return
+
     try:
         with open('data.pkl', 'rb') as fhdl:
             normals = pickle.load(fhdl)
@@ -90,11 +108,7 @@ def main():
             pickle.dump(normals, fhdl)
 
     color = colorizeNormals(normals)
-    import matplotlib.pyplot as plt
     plt.imsave('out.png', color)
-
-    normals = generateNormalMap()
-    plt.imsave('map.png', normals)
 
 
 if __name__ == "__main__":

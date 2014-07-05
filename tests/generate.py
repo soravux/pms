@@ -43,7 +43,7 @@ def generateImages(template, light_positions, lightning_file="lightning.json"):
             "+W1024",
             "+H768",
             filename,
-        ])#, stderr=devnull)
+        ], stderr=devnull)
         if output:
             raise Exception('Could not execute povray.')
         os.remove(filename)
