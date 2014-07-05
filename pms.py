@@ -49,7 +49,74 @@ def photometricStereo(lightning_filename, images_filenames):
     return output
 
 def photometricStereoWithoutLightning(images_filenames):
-    """Based on Basri and al 2010 article."""
+    """Based on Basri and al 2006 article."""
+    images = list(map(getImage, images_filenames))
+    f = len(images_filenames)
+    n = images[0].size
+
+    # Comments are taken directly from Basri and al, 2006
+    # Begin with a set of images, each composing a row of the matrix M
+    M = np.vstack(x.ravel() for x in images)
+
+    # Using SVD M= U \delta V^T, factor M = \widetilde{L} \widetilde{S}, where
+    # \widetilde{L} = U \sqrt{ \delta ^{f4} } and
+    # \widetilde{S} = \sqrt{ \delta ^{4n} } V^T
+    U, delta_vals, Vt = np.linalg.svd(M)
+    delta = np.zeros((f, n))
+    delta[:,:delta_vals.size] = np.diag(delta_vals)
+    L = U.dot( np.sqrt( delta[:,:4] ) )
+    S = np.sqrt( delta[:4,:] ).dot ( Vt )
+
+    # Normalise \widetilde{S} by scaling its rows so to have equal norms
+    S_norms = np.linalg.norm(S, axis=1)
+    S[0,:] *= np.average(S_norms[1:]) / S_norms[0]
+
+    # Construct Q. Each row of Q is constructed with quadratic terms cumputed
+    # from a column of \widetilde{S}
+    # [...] for a column \vec{q} in \widetilde{S} the corresponding row in Q is
+    # (q_1^2, ... , q_4^2, 2 q_1 q_2, ... , 2 q_3 q_4)
+    Q1 = np.take(S, (0, 1, 2, 3, 0, 0, 0, 1, 1, 2), axis=0)
+    Q2 = np.take(S, (0, 1, 2, 3, 1, 2, 3, 2, 3, 3), axis=0)
+    Q = Q1 * Q2
+    Q[:,4:] *= 2
+    Q = np.transpose(Q)
+
+    # Using SVD, construct \widetilde{B} to approximate the null space of Q
+    # (ie., solve Q \vec{b} = 0 and compose \widetilde{B} from the elements of
+    # \vec{b}.
+    UQ, SQ, VQ = np.linalg.svd(Q)
+    b = VQ[:,9]
+    B = np.take(b.flat, (0, 4, 5, 6,
+                         4, 1, 7, 8,
+                         5, 7, 2, 9,
+                         6, 8, 9, 3)).reshape((4, 4))
+
+    # Construct \widetilde{A}
+    B_eig = np.linalg.eigvals(B)
+    B_eig_sn = np.sign(B_eig)
+    nb_eig_sn_positive = np.sum(B_eig_sn[B_eig_sn>0])
+    nb_eig_sn_negative = np.sum(B_eig_sn[B_eig_sn<0])
+    if 1 in (nb_eig_sn_positive, nb_eig_sn_negative):
+        if nb_eig_sn_positive == 1:
+            B = -B
+        Lambda, W = np.linalg.eig(B)
+        Lambda = np.abs(np.diag(Lambda))
+        A = np.sqrt( Lambda ).dot( W )
+    else:
+        print("NOT DONE")
+    import pdb; pdb.set_trace()
+
+
+    # Compute the structure \widetilde{A} \widetilde{S}, which provides the
+    # scene structure up to a scaled Lorentz transformation
+    structure = A.dot( S )
+
+    # Tests
+    normals = structure[1:,:]
+    normals /= np.linalg.norm(normals, axis=0)
+    w, h = images[0].shape
+    normals = normals.reshape(3, w, h).swapaxes(0, 2)
+    return normals
 
 
 def colorizeNormals(normals):

@@ -40,8 +40,8 @@ def generateImages(template, light_positions, lightning_file="lightning.json"):
         output = subprocess.call([
             "povray",
             "+FN", # PNG
-            "+W1024",
-            "+H768",
+            "+W120", #"+W1024",
+            "+H80", #"+H768",
             filename,
         ], stderr=devnull)
         if output:

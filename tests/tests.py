@@ -35,12 +35,11 @@ def doTestAndComparePMS(images, lightning_file, file_prefix):
     color = pms.colorizeNormals(normals)
     plt.imsave('{}-normals.png'.format(file_prefix), color)
     mesh.writeMesh(normals, '{}-mesh.stl'.format(file_prefix))
-    reference = pms.generateNormalMap()
 
 
 @setup_images
-def photometricStereoWithoutLightning(images, lightning_file, file_prefix):
-    normals = pms.photometricStereo(images)
+def doTestAndComparePMSwL(images, lightning_file, file_prefix):
+    normals = pms.photometricStereoWithoutLightning(images)
 
     color = pms.colorizeNormals(normals)
     plt.imsave('{}-normals.png'.format(file_prefix), color)
@@ -49,21 +48,21 @@ def photometricStereoWithoutLightning(images, lightning_file, file_prefix):
 
 lights = (
     (30, ),
-    (-20, 0, 20),
-    (-20, 0, 20),
+    (-30, 0, 30),
+    (-30, 0, 30),
 )
 light_positions = list(product(*lights))
 
 
 def test_sphere():
-    doTestAndComparePMS("sphere.pov.tmpl", light_positions, )
-#    doTestAndComparePMSwL("sphere.pov.tmpl", light_positions)
+#    doTestAndComparePMS("sphere.pov.tmpl", light_positions, )
+    doTestAndComparePMSwL("sphere.pov.tmpl", light_positions)
 
-def test_cube_front():
-    doTestAndComparePMS("cube_front.pov.tmpl", light_positions)
+#def test_cube_front():
+#    doTestAndComparePMS("cube_front.pov.tmpl", light_positions)
 
-def test_cube_angled():
-    doTestAndComparePMS("cube_angled.pov.tmpl", light_positions)
+#def test_cube_angled():
+#    doTestAndComparePMS("cube_angled.pov.tmpl", light_positions)
 
 
 if __name__ == '__main__':
