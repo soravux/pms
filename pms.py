@@ -12,34 +12,48 @@ from matplotlib import pyplot as plt
 
 
 def getImage(filename):
+    """Open image file in greyscale mode (intensity)."""
     return imread(filename, flatten=True)
 
 
 def getLightning(filename):
+    """Open JSON-formatted lightning file."""
     with open(filename, 'r') as fhdl:
         retVal = json.load(fhdl)
     return retVal
 
 
 def photometricStereo(lightning_filename, images_filenames):
+    """Based on Woodham '79 article.
+    I = Matrix of input images, rows being different images.
+    N = lightning vectors
+    N_i = inverse of N
+    rho = albedo of each pixels
+    """
     lightning = getLightning(lightning_filename)
     images = list(map(getImage, images_filenames))
+    n = len(images_filenames)
 
     I = np.vstack(x.ravel() for x in images)
+    output = np.zeros((3, I.shape[1]))
     N = np.vstack(lightning[x] for x in images_filenames)
     N_i = np.linalg.pinv(N)
-    # TODO: Check impact of rho
     rho = np.linalg.norm(N_i.dot( I ), axis=0)
-    normals, residual, rank, s = np.linalg.lstsq(N, I)
+    I = I / rho
+    normals, residual, rank, s = np.linalg.lstsq(N, I[:, rho != 0].reshape(n, -1))
+    output[:,rho != 0] = normals
     w, h = images[0].shape
-    normals = normals.reshape(3, w, h).swapaxes(0, 2)
+    output = output.reshape(3, w, h).swapaxes(0, 2)
     # TODO: Raise an error on misbehavior of lstsq.
 
-    return normals
+    return output
+
+def photometricStereoWithoutLightning(images_filenames):
+    """Based on Basri and al 2010 article."""
 
 
 def colorizeNormals(normals):
-    """Saves the normals as an image"""
+    """Generate an image representing the normals."""
     # Normalize the normals
     nf = np.linalg.norm(normals, axis=normals.ndim - 1)
     normals_n = normals / np.dstack((nf, nf, nf))
@@ -49,8 +63,7 @@ def colorizeNormals(normals):
     return color
 
 def generateNormalMap(dims=600):
-    """Generate a mapping of the normals to understand the colorizeNormals
-    output."""
+    """Generate a mapping of the normals of a perfect sphere."""
     x, y = np.meshgrid(np.linspace(-1, 1, dims), np.linspace(-1, 1, dims))
     zsq = 1 - np.power(x, 2) - np.power(y, 2)
 

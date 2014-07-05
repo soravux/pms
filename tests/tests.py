@@ -5,33 +5,46 @@ import os
 from copy import copy
 from itertools import product
 
-from generate import generateImages
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 # Add parent directory into sys.path
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0, parentdir)
 
+from generate import generateImages
 import pms
 import mesh
 
 
-def doTestAndCompare(template, lights):
-    images, lightning_file = generateImages(template, lights)
+def setup_images(func):
+    def inner(template, lights):
+        images, lightning_file = generateImages(template, lights)
+        file_prefix = template.rsplit(".", 1)[0]
+        func(images, lightning_file, file_prefix)
+        for image in images:
+            os.remove(image)
+        os.remove(lightning_file)
+    return inner
+
+@setup_images
+def doTestAndComparePMS(images, lightning_file, file_prefix):
     normals = pms.photometricStereo(lightning_file, images)
 
     color = pms.colorizeNormals(normals)
-    import matplotlib.pyplot as plt
-    file_prefix = template.rsplit(".", 1)[0]
-    plt.imsave(
-        '{}-normals.png'.format(file_prefix),
-        color,
-    )
-
+    plt.imsave('{}-normals.png'.format(file_prefix), color)
     mesh.writeMesh(normals, '{}-mesh.stl'.format(file_prefix))
+    reference = pms.generateNormalMap()
 
-    for image in images:
-        os.remove(image)
-    os.remove(lightning_file)
+
+@setup_images
+def photometricStereoWithoutLightning(images, lightning_file, file_prefix):
+    normals = pms.photometricStereo(images)
+
+    color = pms.colorizeNormals(normals)
+    plt.imsave('{}-normals.png'.format(file_prefix), color)
+    mesh.writeMesh(normals, '{}-mesh.stl'.format(file_prefix))
 
 
 lights = (
@@ -43,13 +56,14 @@ light_positions = list(product(*lights))
 
 
 def test_sphere():
-    doTestAndCompare("sphere.pov.tmpl", light_positions)
+    doTestAndComparePMS("sphere.pov.tmpl", light_positions, )
+#    doTestAndComparePMSwL("sphere.pov.tmpl", light_positions)
 
 def test_cube_front():
-    doTestAndCompare("cube_front.pov.tmpl", light_positions)
+    doTestAndComparePMS("cube_front.pov.tmpl", light_positions)
 
 def test_cube_angled():
-    doTestAndCompare("cube_angled.pov.tmpl", light_positions)
+    doTestAndComparePMS("cube_angled.pov.tmpl", light_positions)
 
 
 if __name__ == '__main__':

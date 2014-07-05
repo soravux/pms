@@ -13,6 +13,7 @@ Requirements:
 
 * Python >= 3.2 or >= 2.7
 ** Numpy
+** Matplotlib
 * POV-Ray (for the tests)
 
 POV-Ray
