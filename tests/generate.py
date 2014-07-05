@@ -11,7 +11,7 @@ light_command = """
 light_source
 {{
   <{x},{y},{z}>
-  color White
+  color <1,1,1>
 }}
 """
 
@@ -35,9 +35,15 @@ def generateImages(template, light_positions, lightning_file="lightning.json"):
     for light_position in light_positions:
         if np.linalg.norm(light_position) < 10:
             print("Light seems too close of the object.")
-        filename = "{0}-{1}.pov".format(base_name, ".".join(map(str, light_position)))
+        filename = "{0}.{1}.pov".format(base_name, ".".join(map(str, light_position)))
         generatePOVFile(filename, template, light_position)
-        output = subprocess.call(["povray", filename], stderr=devnull)
+        output = subprocess.call([
+            "povray",
+            "+FN", # PNG
+            "+W1024",
+            "+H768",
+            filename,
+        ])#, stderr=devnull)
         if output:
             raise Exception('Could not execute povray.')
         os.remove(filename)

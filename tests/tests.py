@@ -20,7 +20,10 @@ def doTestAndCompare(template, lights):
     color = pms.colorizeNormals(normals)
     import matplotlib.pyplot as plt
     file_prefix = template.rsplit(".", 1)[0]
-    plt.imsave('{}-normals.png'.format(file_prefix), color)
+    plt.imsave(
+        '{}-normals.png'.format(file_prefix),
+        color,
+    )
 
     mesh.writeMesh(normals, '{}-mesh.stl'.format(file_prefix))
 
