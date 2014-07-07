@@ -95,7 +95,7 @@ def photometricStereoWithoutLightning(images_filenames):
     B_eig = np.linalg.eigvals(B)
     B_eig_sn = np.sign(B_eig)
     nb_eig_sn_positive = np.sum(B_eig_sn[B_eig_sn>0])
-    nb_eig_sn_negative = np.sum(B_eig_sn[B_eig_sn<0])
+    nb_eig_sn_negative = np.sum(np.abs(B_eig_sn[B_eig_sn<0]))
     if 1 in (nb_eig_sn_positive, nb_eig_sn_negative):
         if nb_eig_sn_positive == 1:
             B = -B
