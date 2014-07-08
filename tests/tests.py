@@ -34,7 +34,9 @@ def doTestAndComparePMS(images, lightning_file, file_prefix):
 
     color = pms.colorizeNormals(normals)
     plt.imsave('{}-normals.png'.format(file_prefix), color)
-    mesh.writeMesh(normals, '{}-mesh.stl'.format(file_prefix))
+    mesh.write3dNormals(normals, '{}-3dn.stl'.format(file_prefix))
+    surface = mesh.surfaceFromNormals(normals)
+    normals[:,:,2] = surface
 
 
 @setup_images
@@ -43,7 +45,7 @@ def doTestAndComparePMSwL(images, lightning_file, file_prefix):
 
     color = pms.colorizeNormals(normals)
     plt.imsave('{}-normals.png'.format(file_prefix), color)
-    mesh.writeMesh(normals, '{}-mesh.stl'.format(file_prefix))
+    mesh.write3dNormals(normals, '{}-3dn.stl'.format(file_prefix))
 
 
 lights = (

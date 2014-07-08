@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import sparse
 import pickle
 
 import struct
@@ -114,7 +115,45 @@ def get_quad(center, n, side=1.):
     ]]
 
 
-def writeMesh(normals, filename):
+def surfaceFromNormals(normals):
+    w, h, d = normals.shape
+    rows = np.array([])
+    cols = np.array([])
+    data = np.array([])
+    for x in range(w - 2):
+        nx = x + 1
+        for y in range(h - 2):
+            ny = y + 1
+            rows = np.append(rows, [x + 1 + y*x,
+                                    x + 0 + y*x,
+                                    w*h + x + (y + 1)*x,
+                                    w*h + x + (y + 0)*x])
+            cols = np.append(cols, [nx + ny*nx,
+                                    nx + ny*nx,
+                                    nx + ny*nx,
+                                    nx + ny*nx])
+            data = np.append(data, [normals[nx, ny, 2],
+                                    -normals[nx, ny, 2],
+                                    normals[nx, ny, 2],
+                                    -normals[nx, ny, 2]])
+            #M[x + 1 + y*x, nx + ny*nx] = normals[nx, ny, 2]
+            #M[x + 0 + y*x, nx + ny*nx] = -normals[nx, ny, 2]
+            #M[w*h + x + (y + 1)*x, nx + ny*nx] = normals[nx, ny, 2]
+            #M[w*h + x + (y + 0)*x, nx + ny*nx] = -normals[nx, ny, 2]
+    import pdb; pdb.set_trace()
+    # TODO: fill M for boundaries
+    M = sparse.coo_matrix((data, (rows, cols)), shape=(2*w*h, w*h), dtype=np.float64)
+    import pdb; pdb.set_trace()
+    m = -np.transpose(np.hstack((
+        normals[:,:,1].ravel(),
+        normals[:,:,2].ravel(),
+    )))
+    x, residuals, rank, s = np.linalg.lstsq(M, m)
+    surface = np.dstack((normals[:,:,0:1], x.reshape((w, h))))
+    return surface
+
+
+def write3dNormals(normals, filename):
     with open(filename, 'wb') as fp:
         writer = Binary_STL_Writer(fp)
         for x in range(0, normals.shape[0], 20):

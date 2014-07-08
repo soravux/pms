@@ -5,6 +5,7 @@ import pickle
 
 import numpy as np
 from scipy.misc import imread
+from scipy import sparse
 
 import matplotlib
 matplotlib.use('Agg')
@@ -61,13 +62,24 @@ def photometricStereoWithoutLightning(images_filenames):
     # Using SVD M= U \delta V^T, factor M = \widetilde{L} \widetilde{S}, where
     # \widetilde{L} = U \sqrt{ \delta ^{f4} } and
     # \widetilde{S} = \sqrt{ \delta ^{4n} } V^T
-    U, delta_vals, Vt = np.linalg.svd(M)
+
+    U, delta_vals, Vt = np.linalg.svd(M, full_matrices=False)
+    Vt = sparse.dok_matrix(Vt)
+    diag = Vt.diagonal()
+    Vt.resize((max(M.shape), max(M.shape)))
+    Vt.setdiag(np.hstack((
+        diag,
+        np.ones((1, max(M.shape) - diag.size)).ravel(),
+    )))
+
+    # Todo: to sparse
     delta = np.zeros((f, n))
     delta[:,:delta_vals.size] = np.diag(delta_vals)
-    L = U.dot( np.sqrt( delta[:,:4] ) )
+    #L = U.dot( np.sqrt( delta[:,:4] ) )
     S = np.sqrt( delta[:4,:] ).dot ( Vt )
 
     # Normalise \widetilde{S} by scaling its rows so to have equal norms
+    # NOTE: Apply the inverse to L, if the L matrix is ever neded
     S_norms = np.linalg.norm(S, axis=1)
     S[0,:] *= np.average(S_norms[1:]) / S_norms[0]
 
@@ -103,9 +115,10 @@ def photometricStereoWithoutLightning(images_filenames):
         Lambda = np.abs(np.diag(Lambda))
         A = np.sqrt( Lambda ).dot( W )
     else:
-        print("NOT DONE")
+        # Minimize the Frobenius norm
+        UB, SB, VB = np.linalg.svd(B)
+        A = UB.dot ( VB )
     import pdb; pdb.set_trace()
-
 
     # Compute the structure \widetilde{A} \widetilde{S}, which provides the
     # scene structure up to a scaled Lorentz transformation
