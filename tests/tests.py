@@ -22,10 +22,12 @@ def setup_images(func):
     def inner(template, lights):
         images, lightning_file = generateImages(template, lights)
         file_prefix = template.rsplit(".", 1)[0]
-        func(images, lightning_file, file_prefix)
-        for image in images:
-            os.remove(image)
-        os.remove(lightning_file)
+        try:
+            func(images, lightning_file, file_prefix)
+        finally:
+            for image in images:
+                os.remove(image)
+            os.remove(lightning_file)
     return inner
 
 @setup_images
@@ -57,7 +59,7 @@ light_positions = list(product(*lights))
 
 
 def test_sphere():
-#    doTestAndComparePMS("sphere.pov.tmpl", light_positions, )
+#    doTestAndComparePMS("sphere.pov.tmpl", light_positions)
     doTestAndComparePMSwL("sphere.pov.tmpl", light_positions)
 
 #def test_cube_front():
