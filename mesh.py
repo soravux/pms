@@ -104,8 +104,8 @@ def get_quad(center, n, side=1.):
 
     #ortho1[[2,1]] = ortho1[[1,2]]
     #ortho2[[2,1]] = ortho2[[1,2]]
-    ortho1[1] = -ortho1[1]
-    ortho2[1] = -ortho2[1]
+    #ortho1[1] = -ortho1[1]
+    #ortho2[1] = -ortho2[1]
 
     return [[
         center + ortho1,
@@ -152,16 +152,19 @@ def surfaceFromNormals(normals):
     surface = np.dstack((normals[:,:,0:1], x.reshape((w, h))))
     return surface
 
+def writeMesh(points, normals):
+    pass
+
 
 def write3dNormals(normals, filename):
     with open(filename, 'wb') as fp:
         writer = Binary_STL_Writer(fp)
-        for x in range(0, normals.shape[0], 20):
-            for y in range(0, normals.shape[1], 20):
+        for x in range(0, normals.shape[0], 10):
+            for y in range(0, normals.shape[1], 10):
                 quad = get_quad(
                     (0, x, y),
                     normals[x,y,:],
-                    16,
+                    8,
                 )
                 if quad:
                     writer.add_faces(quad)

@@ -63,20 +63,24 @@ def photometricStereoWithoutLightning(images_filenames):
     # \widetilde{L} = U \sqrt{ \delta ^{f4} } and
     # \widetilde{S} = \sqrt{ \delta ^{4n} } V^T
 
+    print("Beginning image SVD")
     U, delta_vals, Vt = np.linalg.svd(M, full_matrices=False)
-    Vt = sparse.dok_matrix(Vt)
-    diag = Vt.diagonal()
-    Vt.resize((max(M.shape), max(M.shape)))
-    Vt.setdiag(np.hstack((
-        diag,
-        np.ones((1, max(M.shape) - diag.size)).ravel(),
-    )))
+    #Vt = sparse.dok_matrix(Vt)
+    #diag = Vt.diagonal()
+    #Vt.resize((max(M.shape), max(M.shape)))
+    #Vt.setdiag(np.hstack((
+    #    diag,
+    #    np.ones((1, max(M.shape) - diag.size)).ravel(),
+    #)))
 
-    # Todo: to sparse
-    delta = np.zeros((f, n))
-    delta[:,:delta_vals.size] = np.diag(delta_vals)
+    #delta = sparse.dok_matrix((f, n))
+    delta = np.zeros((4, min(Vt.shape)))
+    np.fill_diagonal(delta, delta_vals)
+    #delta.resize((4,-1))
+    #delta[:,:delta_vals.size] = np.setd(delta_vals)
     #L = U.dot( np.sqrt( delta[:,:4] ) )
-    S = np.sqrt( delta[:4,:] ).dot ( Vt )
+    print("delta x Vt")
+    S = np.sqrt( delta ).dot ( Vt )
 
     # Normalise \widetilde{S} by scaling its rows so to have equal norms
     # NOTE: Apply the inverse to L, if the L matrix is ever neded
@@ -87,6 +91,7 @@ def photometricStereoWithoutLightning(images_filenames):
     # from a column of \widetilde{S}
     # [...] for a column \vec{q} in \widetilde{S} the corresponding row in Q is
     # (q_1^2, ... , q_4^2, 2 q_1 q_2, ... , 2 q_3 q_4)
+    print("Building Q")
     Q1 = np.take(S, (0, 1, 2, 3, 0, 0, 0, 1, 1, 2), axis=0)
     Q2 = np.take(S, (0, 1, 2, 3, 1, 2, 3, 2, 3, 3), axis=0)
     Q = Q1 * Q2
@@ -96,7 +101,8 @@ def photometricStereoWithoutLightning(images_filenames):
     # Using SVD, construct \widetilde{B} to approximate the null space of Q
     # (ie., solve Q \vec{b} = 0 and compose \widetilde{B} from the elements of
     # \vec{b}.
-    UQ, SQ, VQ = np.linalg.svd(Q)
+    print("Q SVD")
+    UQ, SQ, VQ = np.linalg.svd(Q, full_matrices=False)
     b = VQ[:,9]
     B = np.take(b.flat, (0, 4, 5, 6,
                          4, 1, 7, 8,
@@ -104,6 +110,7 @@ def photometricStereoWithoutLightning(images_filenames):
                          6, 8, 9, 3)).reshape((4, 4))
 
     # Construct \widetilde{A}
+    print("Constructing A")
     B_eig = np.linalg.eigvals(B)
     B_eig_sn = np.sign(B_eig)
     nb_eig_sn_positive = np.sum(B_eig_sn[B_eig_sn>0])
@@ -115,13 +122,20 @@ def photometricStereoWithoutLightning(images_filenames):
         Lambda = np.abs(np.diag(Lambda))
         A = np.sqrt( Lambda ).dot( W )
     else:
+        A = np.eye(4)
+        #for _ in range(10):
+        #    At
+        #    np.linalg.lstsq(At)
         # Minimize the Frobenius norm
-        UB, SB, VB = np.linalg.svd(B)
-        A = UB.dot ( VB )
-    import pdb; pdb.set_trace()
+        #UB, SB, VB = np.linalg.svd(B, full_matrices=False)
+        #import pdb; pdb.set_trace()
+        #A = VB[:,-1]
+        #A = UB.dot ( VB )
+        print("Was here!")
 
     # Compute the structure \widetilde{A} \widetilde{S}, which provides the
     # scene structure up to a scaled Lorentz transformation
+    print("A x S")
     structure = A.dot( S )
 
     # Tests
@@ -129,7 +143,9 @@ def photometricStereoWithoutLightning(images_filenames):
     normals /= np.linalg.norm(normals, axis=0)
     w, h = images[0].shape
     normals = normals.reshape(3, w, h).swapaxes(0, 2)
+    #normals = normals.reshape(w, h, 3)
     return normals
+    #return np.transpose(normals, (1, 0, 2))
 
 
 def colorizeNormals(normals):
