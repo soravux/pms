@@ -39,6 +39,7 @@ def generateImages(template, light_positions, lightning_file="lightning.json"):
             continue
         if np.linalg.norm(light_position) < 10:
             print("Light seems too close of the object.")
+
         generatePOVFile(filename, template, light_position)
         output = subprocess.call([
             "povray",

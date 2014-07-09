@@ -69,6 +69,7 @@ def photometricStereoWithoutLightning(images_filenames):
     delta = np.zeros((4, min(Vt.shape)))
     np.fill_diagonal(delta, delta_vals)
 
+    #L = U.dot( np.sqrt( delta[:,:4] ) )
     print("delta x Vt")
     S = np.sqrt( delta ).dot ( Vt )
 
@@ -108,65 +109,45 @@ def photometricStereoWithoutLightning(images_filenames):
     if 1 in (nb_eig_sn_positive, nb_eig_sn_negative):
         if nb_eig_sn_positive == 1:
             B = -B
-        Lambda, W = np.linalg.eig(B)
+        Lambda, W = np.linalg.eigh(B)
+        idx = np.argsort(Lambda)
+        Lambda.sort()
         Lambda = np.abs(np.diag(Lambda))
-        A = np.sqrt( Lambda ).dot( W )
+        W = W[:,idx]
+        A = np.sqrt( Lambda ).dot( W.T )
     else:
-        def findA(A, B):
-            J = np.eye(4)
-            J[0,0] = -1
-            A = A.reshape((4, 4))
-            bp = np.linalg.norm(B - A.T.dot(J).dot(A))
-            #return bp
-            bn = 888888
-            #bn = np.linalg.norm(-B - A.T.dot(J).dot(A))
-            return min(bp, bn)
-
-        A = np.eye(4)
         J = np.eye(4)
         J[0,0] = -1
-        for _ in range(20):
-            AJ = A.T.dot(J)
-            x, residuals, rank, s = np.linalg.lstsq(AJ, B)
-            #xn, residualsn, rankn, sn = np.linalg.lstsq(A, -B)
-            #if residuals.sum() > residualsn.sum():
-            #    x = xn
-            #    residuals = residualsn
-            #A = (x + A) / 4
-            A = x
-            #print(A)
-            #import pdb; pdb.set_trace()
-            print("error: ", findA(A, B))
-
-        import pdb; pdb.set_trace()
-
-        #A = optimize.fmin(
-        #    findA,
-        #    np.zeros((16,1)),
-        #    args=(B,),
-            #ftol=1e-20,
-            #xtol=1e-20,
-            #maxiter=None,
-            #maxfun=,
-            #disp=1,
-        #).reshape(4, 4)
-        #A = -A
-        #    np.linalg.lstsq(At)
-        # Minimize the Frobenius norm
-        #UB, SB, VB = np.linalg.svd(B, full_matrices=False)
-        #import pdb; pdb.set_trace()
-        #A = VB[:,-1]
-        #A = UB.dot ( VB )
-        #import pdb; pdb.set_trace()
-        print("Was here!")
+        initial_guess = np.eye(4)
+        for _ in range(2):
+            def score(A):
+                A = A.reshape(4,4)
+                return np.linalg.norm(B - A.T.dot(J).dot(A), 'fro')
+            #x = optimize.fmin(
+            #    score,
+            #    initial_guess,
+            #    xtol=1e-15,
+            #    ftol=1e-15,
+            #    maxiter=1e6,
+            #    maxfun=1e6,
+            #)
+            x = optimize.basinhopping(
+                score,
+                initial_guess,
+                niter=100,
+            )
+            A = x.x.reshape(4, 4)
+            initial_guess = A
+        print(score(A))
 
     # Compute the structure \widetilde{A} \widetilde{S}, which provides the
     # scene structure up to a scaled Lorentz transformation
     print("A x S")
+    #A = np.eye(4)
     structure = A.dot( S )
 
-    # Extract the normals at 1 DoF incertainty
-    normals = structure[1:,:]
+    # A Lorentz transform in matrix form multiplies by [ct x y z].T
+    normals = structure[1:4,:]
     normals /= np.linalg.norm(normals, axis=0)
     normals = np.transpose(normals.reshape(3, w, h), (1, 2, 0))
     #normals[:,:,0] *= -1
