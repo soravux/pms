@@ -109,9 +109,12 @@ def photometricStereoWithoutLightning(images_filenames):
     if 1 in (nb_eig_sn_positive, nb_eig_sn_negative):
         if nb_eig_sn_positive == 1:
             B = -B
-        Lambda, W = np.linalg.eig(B)
+        Lambda, W = np.linalg.eigh(B)
+        idx = np.argsort(Lambda)
+        Lambda.sort()
         Lambda = np.abs(np.diag(Lambda))
-        A = np.sqrt( Lambda ).dot( W )
+        W = W[:,idx]
+        A = np.sqrt( Lambda ).dot( W.T )
     else:
         J = np.eye(4)
         J[0,0] = -1
@@ -136,7 +139,6 @@ def photometricStereoWithoutLightning(images_filenames):
             A = x.x.reshape(4, 4)
             initial_guess = A
         print(score(A))
-    #import pdb; pdb.set_trace()
 
     # Compute the structure \widetilde{A} \widetilde{S}, which provides the
     # scene structure up to a scaled Lorentz transformation
@@ -146,7 +148,8 @@ def photometricStereoWithoutLightning(images_filenames):
 
     # A Lorentz transform in matrix form multiplies by [ct x y z].T
     normals = structure[1:4,:]
-    #normals /= np.linalg.norm(normals, axis=0)
+    #import pdb; pdb.set_trace()
+    normals /= np.linalg.norm(normals, axis=0)
     w, h = images[0].shape
     normals = normals.reshape(3, w, h).swapaxes(0, 2)
     #normals = normals.reshape(w, h, 3)
