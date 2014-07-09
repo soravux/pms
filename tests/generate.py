@@ -33,9 +33,13 @@ def generateImages(template, light_positions, lightning_file="lightning.json"):
     filenames = []
     lightning = {}
     for light_position in light_positions:
+        filename = "{0}.{1}.pov".format(base_name, ".".join(map(str, light_position)))
+        filenames.append(filename.rsplit(".", 1)[0] + ".png")
+        if os.path.isfile(filenames[-1]):
+            continue
         if np.linalg.norm(light_position) < 10:
             print("Light seems too close of the object.")
-        filename = "{0}.{1}.pov".format(base_name, ".".join(map(str, light_position)))
+        
         generatePOVFile(filename, template, light_position)
         output = subprocess.call([
             "povray",
@@ -47,7 +51,7 @@ def generateImages(template, light_positions, lightning_file="lightning.json"):
         if output:
             raise Exception('Could not execute povray.')
         os.remove(filename)
-        filenames.append(filename.rsplit(".", 1)[0] + ".png")
+        
 
         lightning[filenames[-1]] = np.negative(np.array(light_position, dtype=np.float64))
         lightning[filenames[-1]] /= np.linalg.norm(lightning[filenames[-1]])

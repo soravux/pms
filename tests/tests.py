@@ -25,9 +25,10 @@ def setup_images(func):
         try:
             func(images, lightning_file, file_prefix)
         finally:
-            for image in images:
-                os.remove(image)
-            os.remove(lightning_file)
+            pass
+            #for image in images:
+            #    os.remove(image)
+            #os.remove(lightning_file)
     return inner
 
 @setup_images
@@ -62,11 +63,13 @@ def test_sphere():
 #    doTestAndComparePMS("sphere.pov.tmpl", light_positions)
     doTestAndComparePMSwL("sphere.pov.tmpl", light_positions)
 
-#def test_cube_front():
+def test_cube_front():
 #    doTestAndComparePMS("cube_front.pov.tmpl", light_positions)
+    doTestAndComparePMSwL("cube_front.pov.tmpl", light_positions)
 
-#def test_cube_angled():
+def test_cube_angled():
 #    doTestAndComparePMS("cube_angled.pov.tmpl", light_positions)
+    doTestAndComparePMSwL("cube_angled.pov.tmpl", light_positions)
 
 
 if __name__ == '__main__':
