@@ -25,9 +25,10 @@ def setup_images(func):
         try:
             func(images, lightning_file, file_prefix)
         finally:
-            for image in images:
-                os.remove(image)
-            os.remove(lightning_file)
+            pass
+            #for image in images:
+            #    os.remove(image)
+            #os.remove(lightning_file)
     return inner
 
 @setup_images
@@ -52,7 +53,7 @@ def doTestAndComparePMSwL(images, lightning_file, file_prefix):
 
 lights = (
     (30, ),
-    (-30, 0, 30),
+    (-30, 30),
     (-30, 0, 30),
 )
 light_positions = list(product(*lights))

@@ -6,6 +6,7 @@ import pickle
 import numpy as np
 from scipy.misc import imread
 from scipy import sparse
+from scipy import optimize
 
 import matplotlib
 matplotlib.use('Agg')
@@ -54,6 +55,7 @@ def photometricStereoWithoutLightning(images_filenames):
     images = list(map(getImage, images_filenames))
     f = len(images_filenames)
     n = images[0].size
+    w, h = images[0].shape
 
     # Comments are taken directly from Basri and al, 2006
     # Begin with a set of images, each composing a row of the matrix M
@@ -62,23 +64,11 @@ def photometricStereoWithoutLightning(images_filenames):
     # Using SVD M= U \delta V^T, factor M = \widetilde{L} \widetilde{S}, where
     # \widetilde{L} = U \sqrt{ \delta ^{f4} } and
     # \widetilde{S} = \sqrt{ \delta ^{4n} } V^T
-
     print("Beginning image SVD")
     U, delta_vals, Vt = np.linalg.svd(M, full_matrices=False)
-    #Vt = sparse.dok_matrix(Vt)
-    #diag = Vt.diagonal()
-    #Vt.resize((max(M.shape), max(M.shape)))
-    #Vt.setdiag(np.hstack((
-    #    diag,
-    #    np.ones((1, max(M.shape) - diag.size)).ravel(),
-    #)))
-
-    #delta = sparse.dok_matrix((f, n))
     delta = np.zeros((4, min(Vt.shape)))
     np.fill_diagonal(delta, delta_vals)
-    #delta.resize((4,-1))
-    #delta[:,:delta_vals.size] = np.setd(delta_vals)
-    #L = U.dot( np.sqrt( delta[:,:4] ) )
+
     print("delta x Vt")
     S = np.sqrt( delta ).dot ( Vt )
 
@@ -122,15 +112,52 @@ def photometricStereoWithoutLightning(images_filenames):
         Lambda = np.abs(np.diag(Lambda))
         A = np.sqrt( Lambda ).dot( W )
     else:
+        def findA(A, B):
+            J = np.eye(4)
+            J[0,0] = -1
+            A = A.reshape((4, 4))
+            bp = np.linalg.norm(B - A.T.dot(J).dot(A))
+            #return bp
+            bn = 888888
+            #bn = np.linalg.norm(-B - A.T.dot(J).dot(A))
+            return min(bp, bn)
+
         A = np.eye(4)
-        #for _ in range(10):
-        #    At
+        J = np.eye(4)
+        J[0,0] = -1
+        for _ in range(20):
+            AJ = A.T.dot(J)
+            x, residuals, rank, s = np.linalg.lstsq(AJ, B)
+            #xn, residualsn, rankn, sn = np.linalg.lstsq(A, -B)
+            #if residuals.sum() > residualsn.sum():
+            #    x = xn
+            #    residuals = residualsn
+            #A = (x + A) / 4
+            A = x
+            #print(A)
+            #import pdb; pdb.set_trace()
+            print("error: ", findA(A, B))
+
+        import pdb; pdb.set_trace()
+
+        #A = optimize.fmin(
+        #    findA,
+        #    np.zeros((16,1)),
+        #    args=(B,),
+            #ftol=1e-20,
+            #xtol=1e-20,
+            #maxiter=None,
+            #maxfun=,
+            #disp=1,
+        #).reshape(4, 4)
+        #A = -A
         #    np.linalg.lstsq(At)
         # Minimize the Frobenius norm
         #UB, SB, VB = np.linalg.svd(B, full_matrices=False)
         #import pdb; pdb.set_trace()
         #A = VB[:,-1]
         #A = UB.dot ( VB )
+        #import pdb; pdb.set_trace()
         print("Was here!")
 
     # Compute the structure \widetilde{A} \widetilde{S}, which provides the
@@ -138,14 +165,12 @@ def photometricStereoWithoutLightning(images_filenames):
     print("A x S")
     structure = A.dot( S )
 
-    # Tests
+    # Extract the normals at 1 DoF incertainty
     normals = structure[1:,:]
     normals /= np.linalg.norm(normals, axis=0)
-    w, h = images[0].shape
-    normals = normals.reshape(3, w, h).swapaxes(0, 2)
-    #normals = normals.reshape(w, h, 3)
+    normals = np.transpose(normals.reshape(3, w, h), (1, 2, 0))
+    #normals[:,:,0] *= -1
     return normals
-    #return np.transpose(normals, (1, 0, 2))
 
 
 def colorizeNormals(normals):
@@ -198,7 +223,7 @@ def main():
              "normal mapping.",
     )
     args = parser.parse_args()
-        
+
     if args.generate_map:
         normals = generateNormalMap()
         plt.imsave('map.png', normals)
