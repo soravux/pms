@@ -12,6 +12,8 @@ import matplotlib
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 
+import mesh
+
 
 def getImage(filename):
     """Open image file in greyscale mode (intensity)."""
@@ -69,14 +71,16 @@ def photometricStereoWithoutLightning(images_filenames):
     delta = np.zeros((4, min(Vt.shape)))
     np.fill_diagonal(delta, delta_vals)
 
-    #L = U.dot( np.sqrt( delta[:,:4] ) )
+    
     print("delta x Vt")
+    L = U.dot( np.sqrt( np.transpose(delta) ) )
     S = np.sqrt( delta ).dot ( Vt )
 
     # Normalise \widetilde{S} by scaling its rows so to have equal norms
-    # NOTE: Apply the inverse to L, if the L matrix is ever neded
     S_norms = np.linalg.norm(S, axis=1)
-    S[0,:] *= np.average(S_norms[1:]) / S_norms[0]
+    norm_factor = np.average(S_norms[1:]) / S_norms[0]
+    S[0,:] *= norm_factor
+    L[:,0] /= norm_factor
 
     # Construct Q. Each row of Q is constructed with quadratic terms cumputed
     # from a column of \widetilde{S}
@@ -148,9 +152,9 @@ def photometricStereoWithoutLightning(images_filenames):
 
     # A Lorentz transform in matrix form multiplies by [ct x y z].T
     normals = structure[1:4,:]
-    normals /= np.linalg.norm(normals, axis=0)
+    #normals /= np.linalg.norm(normals, axis=0)
     normals = np.transpose(normals.reshape(3, w, h), (1, 2, 0))
-    #normals[:,:,0] *= -1
+    normals[:,:,1] *= -1
     return normals
 
 
@@ -188,9 +192,14 @@ def main():
         description="Photometric Stereo",
     )
     parser.add_argument(
-        "lightning",
+        "--lightning",
         nargs="?",
         help="Filename of JSON file containing lightning information",
+    )
+    parser.add_argument(
+        "--mask",
+        nargs="?",
+        help="Filename of an image containing a mask of the object",
     )
     parser.add_argument(
         "image",
@@ -210,20 +219,34 @@ def main():
         plt.imsave('map.png', normals)
         return
 
-    if not (args.lightning and len(args.image) >= 3):
-        print("Please specify a lightning file and 3+ image files.")
+    if not len(args.image) >= 3:
+        print("Please specify 3+ image files.")
         return
 
-    try:
-        with open('data.pkl', 'rb') as fhdl:
-            normals = pickle.load(fhdl)
-    except:
+    if args.lightning:
         normals = photometricStereo(args.lightning, args.image)
-        with open('data.pkl', 'wb') as fhdl:
-            pickle.dump(normals, fhdl)
+        if False:
+            try:
+                with open('data.pkl', 'rb') as fhdl:
+                    normals = pickle.load(fhdl)
+            except:
+                
+                with open('data.pkl', 'wb') as fhdl:
+                    pickle.dump(normals, fhdl)
+    else:
+        normals = photometricStereoWithoutLightning(args.image)
+
+    if args.mask:
+        mask = getImage(args.mask)
+        mask = mask.T
+        print(normals.shape, mask.shape)
+        normals[mask<(mask.max() - mask.min())/2.] = np.nan
 
     color = colorizeNormals(normals)
     plt.imsave('out.png', color)
+    mesh.write3dNormals(normals, 'out-3dn.stl')
+    surface = mesh.surfaceFromNormals(normals)
+    mesh.writeMesh(surface, normals, 'out-mesh.stl')
 
 
 if __name__ == "__main__":

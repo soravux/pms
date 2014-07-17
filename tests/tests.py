@@ -38,8 +38,6 @@ def doTestAndComparePMS(images, lightning_file, file_prefix):
     color = pms.colorizeNormals(normals)
     plt.imsave('{}-normals.png'.format(file_prefix), color)
     mesh.write3dNormals(normals, '{}-3dn.stl'.format(file_prefix))
-    surface = mesh.surfaceFromNormals(normals)
-    normals[:,:,2] = surface
 
 
 @setup_images
@@ -49,12 +47,14 @@ def doTestAndComparePMSwL(images, lightning_file, file_prefix):
     color = pms.colorizeNormals(normals)
     plt.imsave('{}-normals.png'.format(file_prefix), color)
     mesh.write3dNormals(normals, '{}-3dn.stl'.format(file_prefix))
+    surface = mesh.surfaceFromNormals(normals)
+    mesh.writeMesh(surface, normals, '{}-mesh.stl'.format(file_prefix))
 
 
 lights = (
-    (30, ),
-    (-30, 30),
-    (-30, 0, 30),
+    (30, 60),
+    (-80, -60, -15, 0, 15, 60, 80),
+    (-80, -60, -15, 0, 15, 60, 80),
 )
 light_positions = list(product(*lights))
 
@@ -63,13 +63,13 @@ def test_sphere():
 #    doTestAndComparePMS("sphere.pov.tmpl", light_positions)
     doTestAndComparePMSwL("sphere.pov.tmpl", light_positions)
 
-def test_cube_front():
+#def test_cube_front():
 #    doTestAndComparePMS("cube_front.pov.tmpl", light_positions)
-    doTestAndComparePMSwL("cube_front.pov.tmpl", light_positions)
+#    doTestAndComparePMSwL("cube_front.pov.tmpl", light_positions)
 
-def test_cube_angled():
+#def test_cube_angled():
 #    doTestAndComparePMS("cube_angled.pov.tmpl", light_positions)
-    doTestAndComparePMSwL("cube_angled.pov.tmpl", light_positions)
+#    doTestAndComparePMSwL("cube_angled.pov.tmpl", light_positions)
 
 
 if __name__ == '__main__':

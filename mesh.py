@@ -1,8 +1,10 @@
-import numpy as np
-from scipy import sparse
+from itertools import product
+import struct
 import pickle
 
-import struct
+import numpy as np
+from scipy import sparse
+
 
 ASCII_FACET = """facet normal 0 0 0
 outer loop
@@ -104,8 +106,8 @@ def get_quad(center, n, side=1.):
 
     #ortho1[[2,1]] = ortho1[[1,2]]
     #ortho2[[2,1]] = ortho2[[1,2]]
-    #ortho1[1] = -ortho1[1]
-    #ortho2[1] = -ortho2[1]
+    ortho1[1] = -ortho1[1]
+    ortho2[1] = -ortho2[1]
 
     return [[
         center + ortho1,
@@ -116,55 +118,75 @@ def get_quad(center, n, side=1.):
 
 
 def surfaceFromNormals(normals):
+    valid_indices = ~np.isnan(normals)
     w, h, d = normals.shape
-    rows = np.array([])
-    cols = np.array([])
-    data = np.array([])
-    for x in range(w - 2):
-        nx = x + 1
-        for y in range(h - 2):
-            ny = y + 1
-            rows = np.append(rows, [x + 1 + y*x,
-                                    x + 0 + y*x,
-                                    w*h + x + (y + 1)*x,
-                                    w*h + x + (y + 0)*x])
-            cols = np.append(cols, [nx + ny*nx,
-                                    nx + ny*nx,
-                                    nx + ny*nx,
-                                    nx + ny*nx])
-            data = np.append(data, [normals[nx, ny, 2],
-                                    -normals[nx, ny, 2],
-                                    normals[nx, ny, 2],
-                                    -normals[nx, ny, 2]])
-            #M[x + 1 + y*x, nx + ny*nx] = normals[nx, ny, 2]
-            #M[x + 0 + y*x, nx + ny*nx] = -normals[nx, ny, 2]
-            #M[w*h + x + (y + 1)*x, nx + ny*nx] = normals[nx, ny, 2]
-            #M[w*h + x + (y + 0)*x, nx + ny*nx] = -normals[nx, ny, 2]
-    import pdb; pdb.set_trace()
-    # TODO: fill M for boundaries
-    M = sparse.coo_matrix((data, (rows, cols)), shape=(2*w*h, w*h), dtype=np.float64)
-    import pdb; pdb.set_trace()
-    m = -np.transpose(np.hstack((
-        normals[:,:,1].ravel(),
+    nz = np.transpose(np.hstack((
+        normals[:,:,2].ravel(),
         normals[:,:,2].ravel(),
     )))
-    x, residuals, rank, s = np.linalg.lstsq(M, m)
-    surface = np.dstack((normals[:,:,0:1], x.reshape((w, h))))
+    vectorsize = nz.shape
+    valid_idx = ~np.isnan(nz)
+
+    M = sparse.dia_matrix((2*w*h, w*h), dtype=np.float64)
+    # n_z z(x + 1, y) - n_z z(x,y) = n_x
+    M.setdiag(-nz, 0)
+    M.setdiag(nz, 1)
+    # n_z z(x, y + 1) - n_z z(x,y) = n_y
+    M.setdiag(-nz, -w*h)
+    M.setdiag(np.hstack(([0] * w, nz)), -w*h + w)
+
+    
+    # boundary values
+    import pdb; pdb.set_trace()
+
+    M = M.tocsr()[valid_idx]
+
+    # build [ n_x n_y ]'
+    m = np.hstack((
+        normals[:,:,0].ravel(),
+        normals[:,:,1].ravel(),
+    )).reshape(-1, 1)
+    m = m[valid_idx]
+
+    #import pdb; pdb.set_trace()
+    # Solve
+    #x, istop, itn, r1norm, r2norm, anorm, acond, arnorm, xnorm, var = sparse.linalg.lsqr(M, m)
+    x, istop, itn, normr, normar, norma, conda, normx = sparse.linalg.lsmr(M, m)
+
+    # Build the surface (x, y, z)
+    surface = np.dstack((
+        np.indices((w, h))[0],
+        np.indices((w, h))[1],
+        x.reshape((w, h))
+    ))
     return surface
 
-def writeMesh(points, normals):
-    pass
+def writeMesh(surface, normals, filename):
+    s = surface
+    with open(filename, 'wb') as fp:
+        writer = Binary_STL_Writer(fp)
+        for x in range(0, s.shape[0], 5):
+            for y in range(0, s.shape[1], 5):
+        #for x, y in product(range(s.shape[0]), range(s.shape[1])):
+                quad = get_quad(
+                    s[x,y,:],
+                    normals[x,y,:],
+                    4,
+                )
+                if quad:
+                    writer.add_faces(quad)
+        writer.close()
 
 
 def write3dNormals(normals, filename):
     with open(filename, 'wb') as fp:
         writer = Binary_STL_Writer(fp)
-        for x in range(0, normals.shape[0], 10):
-            for y in range(0, normals.shape[1], 10):
+        for x in range(0, normals.shape[0], 5):
+            for y in range(0, normals.shape[1], 5):
                 quad = get_quad(
                     (0, x, y),
                     normals[x,y,:],
-                    8,
+                    4,
                 )
                 if quad:
                     writer.add_faces(quad)
