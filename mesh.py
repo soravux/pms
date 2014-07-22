@@ -4,6 +4,7 @@ import pickle
 
 import numpy as np
 from scipy import sparse
+from scipy import isnan as scipy_isnan
 
 
 ASCII_FACET = """facet normal 0 0 0
@@ -120,6 +121,14 @@ def get_quad(center, n, side=1.):
 def surfaceFromNormals(normals):
     valid_indices = ~np.isnan(normals)
     w, h, d = normals.shape
+    nx = np.transpose(np.hstack((
+        normals[:,:,0].ravel(),
+        normals[:,:,0].ravel(),
+    )))
+    ny = np.transpose(np.hstack((
+        normals[:,:,1].ravel(),
+        normals[:,:,1].ravel(),
+    )))
     nz = np.transpose(np.hstack((
         normals[:,:,2].ravel(),
         normals[:,:,2].ravel(),
@@ -136,24 +145,51 @@ def surfaceFromNormals(normals):
     M.setdiag(np.hstack(([0] * w, nz)), -w*h + w)
 
     
-    # boundary values
-    import pdb; pdb.set_trace()
+    # Boundary values
+    # n_y ( z(x,y) - z(x + 1, y)) = n_x ( z(x,y) - z(x, y + 1))
+    # TODO: Redo for boundaries in Y-axis
+    M = M.tolil()
+    half_size = valid_idx.size // 2
+    bidxd = np.hstack((np.diff(valid_idx.astype('int8')[:half_size]), [0]))
+    inner_boundaries = np.roll(bidxd==1, 1) | (bidxd==-1)
+    outer_boundaries = (bidxd==1) | (np.roll(bidxd==-1, 1))
+
+    nz_t = np.transpose(valid_idx.reshape((w,h,d*2//3)), (1, 0, 2)).ravel()
+    valid_idx_t = ~np.isnan(nz_t)
+    bidxd = np.hstack((np.diff(valid_idx_t.astype('int8')[:half_size]), [0]))
+    inner_boundaries |= np.roll(bidxd==1, 1) | (bidxd==-1)
+    outer_boundaries |= (bidxd==1) | (np.roll(bidxd==-1, 1))
+    
+
+    bidx = np.zeros((half_size,), dtype=np.bool)
+    bidx[inner_boundaries] = True
+    bidx = np.indices(bidx.shape)[0][bidx]
+    M[bidx, bidx] = nx[bidx]
+    M[bidx, bidx + w] = -nx[bidx]
+    M[bidx + half_size, bidx] = ny[bidx]
+    M[bidx + half_size, bidx + 1] = -ny[bidx]
+    weight = 1e50
+    OB = np.zeros((outer_boundaries.sum(), w*h,))
+    OB[np.indices((outer_boundaries.sum(),))[0], np.where(outer_boundaries==True)] = weight
+    M = sparse.vstack((M,OB))
 
     M = M.tocsr()[valid_idx]
 
-    # build [ n_x n_y ]'
+    # Build [ n_x n_y ]'
     m = np.hstack((
         normals[:,:,0].ravel(),
         normals[:,:,1].ravel(),
+        np.zeros((outer_boundaries.sum(), ))
     )).reshape(-1, 1)
+    m[inner_boundaries] = 0
     m = m[valid_idx]
 
-    #import pdb; pdb.set_trace()
-    # Solve
-    #x, istop, itn, r1norm, r2norm, anorm, acond, arnorm, xnorm, var = sparse.linalg.lsqr(M, m)
+    # Solve least squares
+    assert not np.isnan(m).any()
+    # x, istop, itn, r1norm, r2norm, anorm, acond, arnorm, xnorm, var = sparse.linalg.lsqr(M, m)
     x, istop, itn, normr, normar, norma, conda, normx = sparse.linalg.lsmr(M, m)
 
-    # Build the surface (x, y, z)
+    # Build the surface (x, y, z) with the computed values of z
     surface = np.dstack((
         np.indices((w, h))[0],
         np.indices((w, h))[1],
