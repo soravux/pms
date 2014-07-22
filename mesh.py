@@ -168,21 +168,24 @@ def surfaceFromNormals(normals):
     M[bidx, bidx + w] = -nx[bidx]
     M[bidx + half_size, bidx] = ny[bidx]
     M[bidx + half_size, bidx + 1] = -ny[bidx]
-    weight = 1e50
+    M = M.tocsr()[valid_idx]
+
+    weight = 1
     OB = np.zeros((outer_boundaries.sum(), w*h,))
     OB[np.indices((outer_boundaries.sum(),))[0], np.where(outer_boundaries==True)] = weight
     M = sparse.vstack((M,OB))
-
-    M = M.tocsr()[valid_idx]
 
     # Build [ n_x n_y ]'
     m = np.hstack((
         normals[:,:,0].ravel(),
         normals[:,:,1].ravel(),
-        np.zeros((outer_boundaries.sum(), ))
     )).reshape(-1, 1)
     m[inner_boundaries] = 0
     m = m[valid_idx]
+    m = np.vstack((
+        m,
+        np.zeros((outer_boundaries.sum(), 1)),
+    ))
 
     # Solve least squares
     assert not np.isnan(m).any()
