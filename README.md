@@ -1,9 +1,11 @@
 Photometric Stereo
 ==================
 
-This software aims to build a 3D reconstruction from light informations in image. It is primarily based on the works of Woodham [1] with enhancements to come.
+This repository is a first try at Photometric Stereo. It mainly targets researchers needing an implementation of the early papers in photometric stereo, mainly [1] and [2]. Note that *these formulations are now considered obsolete*, you should look at newer papers for an up-to-date and efficient formulation.
 
 [1] Woodham, R. (1979). Photometric stereo: A reflectance map technique for determining surface orientation from image intensity. 22nd Annual Technical …, 136–143. Retrieved from http://proceedings.spiedigitallibrary.org/proceeding.aspx?articleid=1227659
+
+[2] Basri, R., & Jacobs, D. W. (2003). Lambertian reflectance and linear subspaces. IEEE transactions on pattern analysis and machine intelligence, 25(2), 218-233.
 
 
 Installation
@@ -14,14 +16,3 @@ Requirements:
 * Python >= 3.2 or >= 2.7
 ** Numpy
 ** Matplotlib
-* POV-Ray (for the tests)
-
-POV-Ray
-~~~~~~~
-
-Ensure you have a valid POV-Ray installation with the executable `povray` available on your PATH. On Windows, the simplest way to achieve this is to download [megapov](http://megapov.inetart.net/), create a shortcut named `povray` to `megapov` and put it in your PATH environment variable.
-
-How to use
-----------
-
-Todo
