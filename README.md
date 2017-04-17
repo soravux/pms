@@ -4,7 +4,7 @@ Photometric Stereo
 This repository is a first try at Photometric Stereo. It mainly targets researchers needing an implementation of the early papers in photometric stereo, mainly [1] and [2]. Note that **these formulations are now considered obsolete**, you should look at newer papers for an up-to-date and efficient formulation. For state-of-the-art Photometric Stereo methods, please look at our publications for references:
 
 * http://vision.gel.ulaval.ca/~jflalonde/projects/outdoorPS/index.html
-* http://vasdasdasdision.gel.ulaval.ca/~jflalonde/projects/xHourPS/index.html
+* http://vision.gel.ulaval.ca/~jflalonde/projects/xHourPS/index.html
 
 
 [1] Woodham, R. (1979). Photometric stereo: A reflectance map technique for determining surface orientation from image intensity. 22nd Annual Technical …, 136–143. Retrieved from http://proceedings.spiedigitallibrary.org/proceeding.aspx?articleid=1227659
