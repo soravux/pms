@@ -18,5 +18,5 @@ Installation
 Requirements:
 
 * Python >= 3.2 or >= 2.7
-** Numpy
-** Matplotlib
+* Numpy
+* Matplotlib
